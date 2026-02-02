@@ -93,7 +93,7 @@ Validates K.303 disclosure reports ("גילוי נאות") from Maya with curren
 - **Check 1ב**: Date validity - report dates match expected month
 - **Check 2א**: Previous month comparison - significant changes detection
 - **Check 2ב**: Exposure profile validation
-- **Checks 3א-3ח**: Various K.303-specific validations
+- **Checks 3א-ח**: Various K.303-specific validations
 
 ### Directory Structure
 
