@@ -112,11 +112,10 @@ CSV/XLSX Input → Load & Parse → Normalize & Filter → Apply Checks → Aggr
 
 | Actor ID | Purpose |
 |----------|---------|
-| Actor ID | Purpose |
 | `K9WppTziYC3n2vxTu` | Funds list |
 | `5lhI6O39Qbgv9O0gs` | Fund reports (holdings) |
 | `iTpNz9ixbdQCmH43C` | K.303 disclosure reports (Maya scraper) |
-| *TBD* | INDX historical index data (indx_downloader) |
+| `P9tr210PVi6W8RvtU` | INDX historical index data (indx_downloader) |
 
 ### Mizrahi_4 Daily Tracking
 

@@ -10,7 +10,6 @@ Usage:
 
 import os
 import sys
-import time
 import base64
 import argparse
 import tempfile
@@ -20,13 +19,18 @@ from datetime import datetime
 from pathlib import Path
 
 try:
-    import requests
     import pandas as pd
     from dotenv import load_dotenv
 except ImportError as e:
     print(f"Missing required package: {e}")
     print("Install with: pip install pandas openpyxl requests python-dotenv")
     sys.exit(1)
+
+# Add parent directory to path for shared imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from shared.apify_client import apify_request, run_actor_and_wait, log
+from shared.constants import APIFY_ACTORS
 
 # Load .env file from project root
 load_dotenv(Path(__file__).parent.parent / ".env")
@@ -37,67 +41,10 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 
 APIFY_TOKEN = os.environ.get("APIFY_TOKEN", "")
 
-# Apify Actor IDs
-FUNDS_LIST_ACTOR_ID = "K9WppTziYC3n2vxTu"
-INDX_HISTORICAL_ACTOR_ID = "P9tr210PVi6W8RvtU"
-
 # Default input file paths (relative to Mizrahi_4/)
 DEFAULT_FUND_INDEX_TABLE = "input/fund-index-table.xlsx"
 DEFAULT_BFIX_PRICES = "input/BFIX PRICE BLOOMBERG.xlsx"
 DEFAULT_BLOOMBERG_INDEX = "input/bloomberg-index.xlsx"
-
-
-# ============================================================================
-# LOGGING
-# ============================================================================
-
-def log(msg: str) -> None:
-    """Print timestamped log message."""
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
-
-
-# ============================================================================
-# APIFY HELPERS
-# ============================================================================
-
-def apify_request(method: str, endpoint: str, json_data: dict = None, params: dict = None):
-    """Make request to Apify API."""
-    url = f"https://api.apify.com/v2{endpoint}"
-    headers = {"Authorization": f"Bearer {APIFY_TOKEN}"}
-    response = requests.request(method, url, headers=headers, json=json_data, params=params)
-    response.raise_for_status()
-    return response
-
-
-def run_actor_and_wait(actor_id: str, input_data: dict = None, timeout: int = 180) -> dict:
-    """Run an Apify actor and wait for completion."""
-    log(f"Starting Apify actor: {actor_id}")
-
-    resp = apify_request(
-        "POST",
-        f"/acts/{actor_id}/runs",
-        json_data=input_data or {},
-        params={"timeout": timeout}
-    )
-    run_data = resp.json()["data"]
-    run_id = run_data["id"]
-    log(f"Run started: {run_id}")
-
-    start = time.time()
-    while time.time() - start < timeout:
-        resp = apify_request("GET", f"/actor-runs/{run_id}")
-        status = resp.json()["data"]["status"]
-
-        if status == "SUCCEEDED":
-            log(f"Run completed: {run_id}")
-            return resp.json()["data"]
-        elif status in ("FAILED", "ABORTED", "TIMED-OUT"):
-            raise Exception(f"Actor failed with status: {status}")
-
-        log(f"Status: {status}... waiting")
-        time.sleep(3)
-
-    raise Exception("Timeout waiting for actor")
 
 
 # ============================================================================
@@ -150,10 +97,10 @@ def fetch_funds_list(temp_dir: Path) -> Path:
     """Fetch master funds list from Apify and save as CSV."""
     log("Fetching funds list from Apify...")
 
-    run_data = run_actor_and_wait(FUNDS_LIST_ACTOR_ID, {})
+    run_data = run_actor_and_wait(APIFY_TOKEN, APIFY_ACTORS["FUNDS_LIST"], {})
     dataset_id = run_data["defaultDatasetId"]
 
-    resp = apify_request("GET", f"/datasets/{dataset_id}/items")
+    resp = apify_request(APIFY_TOKEN, "GET", f"/datasets/{dataset_id}/items")
     items = resp.json()
 
     if not items or not items[0].get("fileBase64"):
@@ -210,7 +157,8 @@ def fetch_indx_historical_data(fund_index_table: Path, temp_dir: Path) -> Path |
 
     # Run INDX actor
     run_data = run_actor_and_wait(
-        INDX_HISTORICAL_ACTOR_ID,
+        APIFY_TOKEN,
+        APIFY_ACTORS["INDX_HISTORICAL"],
         {"indexUrls": index_urls},
         timeout=300  # Allow more time for multiple downloads
     )
@@ -223,7 +171,7 @@ def fetch_indx_historical_data(fund_index_table: Path, temp_dir: Path) -> Path |
     records_dir.mkdir(exist_ok=True)
 
     # List all keys in the KV store
-    resp = apify_request("GET", f"/key-value-stores/{kv_store_id}/keys")
+    resp = apify_request(APIFY_TOKEN, "GET", f"/key-value-stores/{kv_store_id}/keys")
     keys = resp.json()["data"]["items"]
 
     # Download all Excel files
@@ -231,7 +179,7 @@ def fetch_indx_historical_data(fund_index_table: Path, temp_dir: Path) -> Path |
     for key_info in keys:
         key = key_info["key"]
         if key.endswith("_Historical_Data.xlsx"):
-            resp = apify_request("GET", f"/key-value-stores/{kv_store_id}/records/{key}")
+            resp = apify_request(APIFY_TOKEN, "GET", f"/key-value-stores/{kv_store_id}/records/{key}")
             file_path = records_dir / key
             file_path.write_bytes(resp.content)
             log(f"  Downloaded: {key} ({len(resp.content):,} bytes)")

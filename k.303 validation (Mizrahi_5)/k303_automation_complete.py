@@ -10,99 +10,34 @@ Usage:
 
 import os
 import sys
-import time
 import base64
 import argparse
 import tempfile
 import shutil
 import subprocess
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 
 # Try to import required packages
 try:
-    import requests
     import pandas as pd
 except ImportError as e:
     print(f"Missing required package: {e}")
     print("Install with: pip install pandas openpyxl requests")
     sys.exit(1)
 
+# Add parent directory to path for shared imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from shared.apify_client import apify_request, run_actor_and_wait, log
+from shared.constants import FUND_MANAGER_CODES, APIFY_ACTORS, HEBREW_MONTHS_REVERSE
+
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
 
 APIFY_TOKEN = os.environ.get("APIFY_TOKEN", "")
-
-# Apify Actor IDs
-FUNDS_LIST_ACTOR_ID = "K9WppTziYC3n2vxTu"
-K303_REPORTS_ACTOR_ID = "iTpNz9ixbdQCmH43C"
-
-# Fund Manager Codes
-FUND_MANAGER_CODES = {
-    "מגדל": "10040",
-    "איילון": "10054",
-    "קסם": "10047",
-    "סיגמא": "10048",
-    "פורסט": "10082",
-    "הראל": "10031",
-    "אנליסט": "10019",
-    "מיטב": "10083",
-    "איביאי": "10068",
-    "אלטשולר-שחם": "10017",
-}
-
-# ============================================================================
-# LOGGING
-# ============================================================================
-
-def log(msg: str) -> None:
-    """Print timestamped log message."""
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
-
-
-# ============================================================================
-# APIFY FUNCTIONS
-# ============================================================================
-
-def apify_request(method: str, endpoint: str, json_data: dict = None, params: dict = None):
-    """Make request to Apify API."""
-    url = f"https://api.apify.com/v2{endpoint}"
-    headers = {"Authorization": f"Bearer {APIFY_TOKEN}"}
-    response = requests.request(method, url, headers=headers, json=json_data, params=params)
-    response.raise_for_status()
-    return response
-
-
-def run_actor_and_wait(actor_id: str, input_data: dict = None, timeout: int = 180) -> dict:
-    """Run an Apify actor and wait for completion."""
-    log(f"Starting Apify actor: {actor_id}")
-
-    resp = apify_request(
-        "POST",
-        f"/acts/{actor_id}/runs",
-        json_data=input_data or {},
-        params={"timeout": timeout}
-    )
-    run_data = resp.json()["data"]
-    run_id = run_data["id"]
-    log(f"Run started: {run_id}")
-
-    start = time.time()
-    while time.time() - start < timeout:
-        resp = apify_request("GET", f"/actor-runs/{run_id}")
-        status = resp.json()["data"]["status"]
-
-        if status == "SUCCEEDED":
-            log(f"Run completed: {run_id}")
-            return resp.json()["data"]
-        elif status in ("FAILED", "ABORTED", "TIMED-OUT"):
-            raise Exception(f"Actor failed with status: {status}")
-
-        log(f"Status: {status}... waiting")
-        time.sleep(3)
-
-    raise Exception("Timeout waiting for actor")
 
 
 # ============================================================================
@@ -113,10 +48,10 @@ def fetch_funds_list(temp_dir: Path) -> Path:
     """Fetch master funds list from Apify and save as CSV."""
     log("Fetching funds list (master Excel)...")
 
-    run_data = run_actor_and_wait(FUNDS_LIST_ACTOR_ID, {})
+    run_data = run_actor_and_wait(APIFY_TOKEN, APIFY_ACTORS["FUNDS_LIST"], {})
     dataset_id = run_data["defaultDatasetId"]
 
-    resp = apify_request("GET", f"/datasets/{dataset_id}/items")
+    resp = apify_request(APIFY_TOKEN, "GET", f"/datasets/{dataset_id}/items")
     items = resp.json()
 
     if not items or not items[0].get("fileBase64"):
@@ -152,7 +87,8 @@ def fetch_k303_reports(fund_name: str, temp_dir: Path) -> tuple[Path, Path, str 
 
     # Run the K.303 actor with fund manager name
     run_data = run_actor_and_wait(
-        K303_REPORTS_ACTOR_ID,
+        APIFY_TOKEN,
+        APIFY_ACTORS["K303_REPORTS"],
         {"fundManagerName": fund_name},
         timeout=300  # K.303 downloads can be slow
     )
@@ -165,9 +101,8 @@ def fetch_k303_reports(fund_name: str, temp_dir: Path) -> tuple[Path, Path, str 
     # Example: "נתוני גילוי נאות לחודש דצמבר 2025" -> 2025-12
     # The report name already contains the actual month the report is FOR (not upload date)
     report_month = None
-    import re
     try:
-        resp = apify_request("GET", f"/datasets/{dataset_id}/items")
+        resp = apify_request(APIFY_TOKEN, "GET", f"/datasets/{dataset_id}/items")
         items = resp.json()
 
         # Check if the actor run actually succeeded in downloading files
@@ -183,19 +118,13 @@ def fetch_k303_reports(fund_name: str, temp_dir: Path) -> tuple[Path, Path, str 
             # Extract month and year from Hebrew report name
             # Format: "נתוני גילוי נאות לחודש <month> <year>" or similar
             # The month in the report name is the actual report month (not upload month)
-            hebrew_months = {
-                "ינואר": "01", "פברואר": "02", "מרץ": "03", "אפריל": "04",
-                "מאי": "05", "יוני": "06", "יולי": "07", "אוגוסט": "08",
-                "ספטמבר": "09", "אוקטובר": "10", "נובמבר": "11", "דצמבר": "12",
-            }
-
-            for heb_month, num_month in hebrew_months.items():
+            for heb_month, num_month in HEBREW_MONTHS_REVERSE.items():
                 if heb_month in report_name:
                     # Find year (4 digits)
                     year_match = re.search(r'20\d{2}', report_name)
                     if year_match:
                         year = year_match.group()
-                        report_month = f"{year}-{num_month}"
+                        report_month = f"{year}-{num_month:02d}"
                         log(f"Extracted report month from name: {report_month}")
                         break
     except Exception as e:
@@ -204,13 +133,13 @@ def fetch_k303_reports(fund_name: str, temp_dir: Path) -> tuple[Path, Path, str 
 
     # Download current month report
     current_path = temp_dir / "report_latest_month.csv"
-    resp = apify_request("GET", f"/key-value-stores/{kv_store_id}/records/report_latest_month.csv")
+    resp = apify_request(APIFY_TOKEN, "GET", f"/key-value-stores/{kv_store_id}/records/report_latest_month.csv")
     current_path.write_bytes(resp.content)
     log(f"Downloaded current report: {current_path} ({len(resp.content):,} bytes)")
 
     # Download previous month report
     previous_path = temp_dir / "report_previous_month.csv"
-    resp = apify_request("GET", f"/key-value-stores/{kv_store_id}/records/report_previous_month.csv")
+    resp = apify_request(APIFY_TOKEN, "GET", f"/key-value-stores/{kv_store_id}/records/report_previous_month.csv")
     previous_path.write_bytes(resp.content)
     log(f"Downloaded previous report: {previous_path} ({len(resp.content):,} bytes)")
 
