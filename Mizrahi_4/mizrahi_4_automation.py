@@ -142,8 +142,21 @@ def get_indx_urls_from_fund_table(fund_index_table: Path) -> list[str]:
     return urls
 
 
-def fetch_indx_historical_data(fund_index_table: Path, temp_dir: Path) -> Path | None:
-    """Fetch INDX historical data files from Apify."""
+def fetch_indx_historical_data(
+    fund_index_table: Path,
+    temp_dir: Path,
+    save_local_dir: Path | None = None
+) -> Path | None:
+    """Fetch INDX historical data files from Apify.
+
+    Args:
+        fund_index_table: Path to fund-index-table.xlsx
+        temp_dir: Temp directory for downloads
+        save_local_dir: If provided, save files here; otherwise use temp_dir
+
+    Returns:
+        Path to directory containing the downloaded files
+    """
     log("Fetching INDX historical data from Apify...")
 
     # Get URLs to scrape
@@ -166,9 +179,15 @@ def fetch_indx_historical_data(fund_index_table: Path, temp_dir: Path) -> Path |
     kv_store_id = run_data["defaultKeyValueStoreId"]
     log(f"Key-Value Store ID: {kv_store_id}")
 
-    # Create records directory
-    records_dir = temp_dir / "indx_records"
-    records_dir.mkdir(exist_ok=True)
+    # Determine output directory
+    if save_local_dir:
+        records_dir = save_local_dir
+        records_dir.mkdir(parents=True, exist_ok=True)
+        log(f"Saving INDX files to local directory: {records_dir}")
+    else:
+        records_dir = temp_dir / "indx_records"
+        records_dir.mkdir(exist_ok=True)
+        log("Saving INDX files to temp directory")
 
     # List all keys in the KV store
     resp = apify_request(APIFY_TOKEN, "GET", f"/key-value-stores/{kv_store_id}/keys")
@@ -279,6 +298,12 @@ def main():
         action="store_true",
         help="Skip fetching INDX historical data"
     )
+    parser.add_argument(
+        "--save-indx-local",
+        type=Path,
+        default=None,
+        help="Save downloaded INDX files to this local directory (disabled by default, uses temp location)"
+    )
 
     args = parser.parse_args()
 
@@ -289,6 +314,7 @@ def main():
     log(f"BFIX Prices:      {args.bfix_prices}")
     log(f"Bloomberg Index:  {args.bloomberg_index}")
     log(f"Output Dir:       {args.output_dir}")
+    log(f"Save INDX Local:  {args.save_indx_local or '(disabled, using temp)'}")
     log("=" * 60)
 
     # Check APIFY_TOKEN
@@ -317,7 +343,11 @@ def main():
         indx_records = None
         if not args.skip_indx:
             log("\n--- STEP 3: Fetching INDX historical data ---")
-            indx_records = fetch_indx_historical_data(args.fund_index_table, temp_dir)
+            indx_records = fetch_indx_historical_data(
+                args.fund_index_table,
+                temp_dir,
+                save_local_dir=args.save_indx_local
+            )
         else:
             log("\n--- STEP 3: Skipping INDX historical data (--skip-indx) ---")
 
