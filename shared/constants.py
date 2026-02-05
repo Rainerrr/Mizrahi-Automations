@@ -4,7 +4,6 @@
 # Fund Manager Codes - maps Hebrew names to TASE codes
 FUND_MANAGER_CODES = {
     "מגדל": "10040",
-    "איילון": "10054",
     "קסם": "10047",
     "סיגמא": "10048",
     "פורסט": "10082",

@@ -22,10 +22,14 @@ from pathlib import Path
 # Try to import required packages
 try:
     import pandas as pd
+    from dotenv import load_dotenv
 except ImportError as e:
     print(f"Missing required package: {e}")
-    print("Install with: pip install pandas openpyxl requests")
+    print("Install with: pip install pandas openpyxl requests python-dotenv")
     sys.exit(1)
+
+# Load .env file from project root
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 # Add parent directory to path for shared imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
