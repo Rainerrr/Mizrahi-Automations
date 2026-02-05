@@ -161,10 +161,8 @@ The K.303 validator uses a hierarchical code system (levels 1-4) defined in `k.3
 | Hebrew Name | Code |
 |------------|------|
 | מגדל (Migdal) | 10040 |
-| איילון (Ayalon) | 10054 |
 | קסם (Kesem) | 10047 |
 | סיגמא (Sigma) | 10048 |
-| פורסט (Forest) | 10082 |
 | הראל (Harel) | 10031 |
 | אנליסט (Analyst) | 10019 |
 | מיטב (Meitav) | 10083 |
