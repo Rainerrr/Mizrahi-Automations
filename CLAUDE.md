@@ -146,6 +146,15 @@ Output: One Excel sheet per fund with 31 base columns (date, index, fees, rates,
 - Downloaded files use pattern: `{index_id}_Historical_Data.xlsx`
 - Actor input: `{ "indexUrls": ["https://indx.co.il/index/2123-index/", ...] }`
 
+**TASE Index Integration**: For funds with "מאי"ה" data source (column D in `fund-index-table.xlsx`):
+- Index data is fetched from TASE Data Hub API (`/v1/indices/eod/history/five-years/by-index`)
+- TASE index IDs are stored in column B (e.g., `142` for TA-35, `724` for Tel Bond-Shekel 1-3)
+- Index names are stored in column C (e.g., "תל בונד-שקלי 1-3") - used for column D header
+- Uses `closingIndexPrice` field from API response
+- Enabled by default; API key from `TASE_API_KEY` env var (set in `.env`)
+- Skip with `--skip-tase-data` flag
+- Rate limiting: 10 requests per 2 seconds (automatic 0.25s delay between requests)
+
 **Hierarchical logging** - Each run creates a timestamped directory under `log/` with separate log files per check.
 
 **Smart sampling** - When exceptions exceed threshold (default 100), stratified sampling preserves representation of all exception types.
@@ -266,43 +275,40 @@ Exceeding limits returns `HTTP 429 - Too Many Requests`.
 
 **Note**: Some data products require commercial approval prior to activation. Registration requests do not automatically grant access to paid products.
 
-### Securities Data - Five Years Back (Product)
+### Indices Data EoD - Five Years Back (Product)
 
-This product provides EOD (End of Day) trading data for securities traded on TASE for the last 5 years.
+This product provides EOD (End of Day) data for TASE indices for the last 5 years.
 
 **Local Documentation**:
-- `Mizrahi_4/docs/tase-securities-5years-openapi.yaml` - Raw OpenAPI spec
-- `Mizrahi_4/docs/tase-api-example.py` - Python examples (http.client + requests)
-- `Mizrahi_4/docs/Securities data - Five years back...Developer Portal.html` - Saved portal page
+- `Mizrahi_4/docs/tase-indices-5years-openapi.yaml` - Raw OpenAPI spec
 
 #### Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/v1/securities/trading/eod/history/five-years/by-date` | Trading data for a specific date, for all securities traded on TASE |
-| GET | `/v1/securities/trading/eod/history/five-years/by-security` | Trading data for a specific security across dates |
-| GET | `/v1/securities/trading/eod/history/five-years/ex-code` | Trading data by ex-code |
+| GET | `/v1/indices/eod/history/five-years/by-date` | Index data for a specific date |
+| GET | `/v1/indices/eod/history/five-years/by-index` | Index data for a specific index across dates |
 
 ---
 
-#### GET by-security (Primary endpoint for index values)
+#### GET by-index (Primary endpoint for index values)
 
-**Endpoint**: `GET /v1/securities/trading/eod/history/five-years/by-security`
+**Endpoint**: `GET /v1/indices/eod/history/five-years/by-index`
 
-Returns trading data for a specific security over the past five years.
+Returns end-of-day prices and trading data for a specific TASE index over the past five years.
 
 **Parameters**:
 
 | Parameter | Type | Location | Required | Description |
 |-----------|------|----------|----------|-------------|
-| `securityId` | integer | query | **Yes** | Security Id, must be between 1 to 999999999 |
+| `indexId` | integer | query | **Yes** | Index Id, must be between 1 to 999 |
 | `fromDate` | string | query | **Yes** | First date to filter by (format: `YYYY-MM-DD`), must be in range of last 5 years |
 | `toDate` | string | query | No | Last date to filter by (format: `YYYY-MM-DD`) |
 
 **Example Request**:
 ```bash
 curl --request GET \
-  --url 'https://datawise.tase.co.il/v1/securities/trading/eod/history/five-years/by-security?securityId=251017&fromDate=2024-01-01&toDate=2024-12-31' \
+  --url 'https://datawise.tase.co.il/v1/indices/eod/history/five-years/by-index?indexId=142&fromDate=2024-01-01&toDate=2024-12-31' \
   --header 'accept: application/json' \
   --header 'accept-language: he-IL' \
   --header 'apikey: YOUR_API_KEY'
@@ -311,31 +317,18 @@ curl --request GET \
 **Response Schema** (200 OK):
 ```json
 {
-  "securitiesEndOfDayTradingData": {
+  "indexEndOfDay": {
     "result": [
       {
         "tradeDate": "2023-03-01T00:00:00",
-        "firstTradingDate": "2020-05-04T15:31:18.726",
-        "isin": "IL0095420365",
-        "change": "1.23",
-        "securityId": 102012,
-        "turnover": 494462,
-        "closingPrice": 323,
-        "basePrice": 138.2,
-        "openingPrice": 138,
-        "high": 139.9,
-        "low": 137.5,
-        "changeValue": 0,
-        "transactionsNumber": 11,
-        "volume": 494462,
-        "marketCap": 1259100,
-        "minContPhaseAmount": 23000,
-        "listedCapital": 83177500,
-        "adjustedClosingPrice": 2137,
-        "exCode": 2,
-        "adjustmentCoefficient": 0.98,
-        "symbol": "GL5420",
-        "marketType": "Stock"
+        "indexId": "142",
+        "isin": "IL0004250176",
+        "baseIndexPrice": 1260.33,
+        "indexOpeningPrice": 1260.33,
+        "high": 353.26,
+        "low": 324.25,
+        "overallMarketCap": 895057151.5,
+        "closingIndexPrice": 348.76
       }
     ],
     "total": 50
@@ -348,87 +341,44 @@ curl --request GET \
 | Field | Type | Description |
 |-------|------|-------------|
 | `tradeDate` | datetime | Trading date |
-| `securityId` | integer | TASE security identifier |
-| `closingPrice` | number | **Closing price (use this for index values)** |
-| `openingPrice` | number | Opening price |
-| `high` | number | Day's high |
-| `low` | number | Day's low |
-| `basePrice` | number | Base price |
-| `change` | string | Percentage change |
-| `changeValue` | number | Absolute change value |
-| `volume` | integer | Trading volume |
-| `turnover` | integer | Turnover |
-| `transactionsNumber` | integer | Number of transactions |
-| `marketCap` | integer | Market capitalization |
+| `indexId` | string | TASE index identifier |
 | `isin` | string | International Securities ID (IL...) |
-| `symbol` | string | Ticker symbol |
-| `marketType` | string | Market type (e.g., "Stock") |
-| `adjustedClosingPrice` | number | Adjusted closing price |
-| `adjustmentCoefficient` | number | Adjustment coefficient |
-| `exCode` | integer | Ex-code |
-| `firstTradingDate` | datetime | First trading date of security |
-| `minContPhaseAmount` | integer | Minimum continuous phase amount |
-| `listedCapital` | integer | Listed capital |
+| `baseIndexPrice` | number | Index base rate |
+| `indexOpeningPrice` | number | Index opening rate |
+| `high` | number | Highest index rate |
+| `low` | number | Lowest index rate |
+| `overallMarketCap` | number | Overall market cap in NIS |
+| `closingIndexPrice` | number | **Index closing rate (use this for index values)** |
 
 **Error Responses**:
 
 | Code | Message |
 |------|---------|
-| 400 | Security is not a number |
+| 400 | Index is not a number |
 | 429 | Too Many Requests (rate limit exceeded) |
 
 ---
 
 #### GET by-date
 
-**Endpoint**: `GET /v1/securities/trading/eod/history/five-years/by-date`
+**Endpoint**: `GET /v1/indices/eod/history/five-years/by-date`
 
-Returns trading data for all securities on a specific date.
+Returns end-of-day prices and trading data for all TASE indices on a specific date.
 
 **Parameters**:
 
 | Parameter | Type | Location | Required | Description |
 |-----------|------|----------|----------|-------------|
 | `date` | string | query | **Yes** | Date to filter by (format: `YYYY-MM-DD`), must be in range of last 5 years |
-| `securityId` | integer | query | No | Security Id to filter by, must be between 1 to 999999999 |
+| `indexId` | integer | query | No | Index Id to filter by, must be between 1 to 999 |
 
 **Example Request**:
 ```bash
 curl --request GET \
-  --url 'https://datawise.tase.co.il/v1/securities/trading/eod/history/five-years/by-date?date=2024-01-15' \
+  --url 'https://datawise.tase.co.il/v1/indices/eod/history/five-years/by-date?date=2024-01-15' \
   --header 'accept: application/json' \
   --header 'accept-language: he-IL' \
   --header 'apikey: YOUR_API_KEY'
-```
-
----
-
-#### GET ex-code
-
-**Endpoint**: `GET /v1/securities/trading/eod/history/five-years/ex-code`
-
-Returns list of ex-code definitions (rights, dividends, etc.).
-
-**Parameters**:
-
-| Parameter | Type | Location | Required | Description |
-|-----------|------|----------|----------|-------------|
-| `accept-language` | string | header | **Yes** | Language: `en-US` or `he-IL` (default) |
-
-**Response Schema**:
-```json
-{
-  "exCodesResponse": {
-    "result": [
-      {
-        "exCode": 1,
-        "exCodeType": "EX R",
-        "exCodeDescription": "EX RIGHTS"
-      }
-    ],
-    "total": 33
-  }
-}
 ```
 
 ## Language & Encoding
