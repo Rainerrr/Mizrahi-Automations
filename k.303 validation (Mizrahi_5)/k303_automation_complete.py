@@ -35,7 +35,7 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from shared.apify_client import apify_request, run_actor_and_wait, log
-from shared.constants import FUND_MANAGER_CODES, APIFY_ACTORS, HEBREW_MONTHS_REVERSE
+from shared.constants import FUND_MANAGER_CODES_K303, APIFY_ACTORS, HEBREW_MONTHS_REVERSE
 
 # ============================================================================
 # CONFIGURATION
@@ -90,7 +90,7 @@ def fetch_k303_reports(fund_name: str, temp_dir: Path) -> tuple[Path, Path, str 
     log(f"Fetching K.303 reports for: {fund_name}")
 
     # Run the K.303 actor — pass numeric code when available, fall back to name
-    fund_code = FUND_MANAGER_CODES.get(fund_name)
+    fund_code = FUND_MANAGER_CODES_K303.get(fund_name)
     actor_input = {"fundManagerCode": fund_code} if fund_code else {"fundManagerName": fund_name}
     run_data = run_actor_and_wait(
         APIFY_TOKEN,
@@ -206,7 +206,7 @@ def main():
     parser.add_argument(
         "--fund-name",
         required=True,
-        choices=list(FUND_MANAGER_CODES.keys()),
+        choices=list(FUND_MANAGER_CODES_K303.keys()),
         help="Fund manager name (Hebrew)"
     )
     parser.add_argument(

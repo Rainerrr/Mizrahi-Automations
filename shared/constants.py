@@ -5,9 +5,16 @@ import json
 from pathlib import Path
 
 # Fund Manager Codes - loaded from fund_managers.json (single source of truth)
+# Each automation has its own section; FUND_MANAGER_CODES is the union of all.
 _FM_PATH = Path(__file__).parent / "fund_managers.json"
 with open(_FM_PATH, encoding="utf-8") as _f:
-    FUND_MANAGER_CODES = json.load(_f)
+    _FM_DATA = json.load(_f)
+
+FUND_MANAGER_CODES_HOLDINGS = _FM_DATA["fund_holdings"]
+FUND_MANAGER_CODES_K303 = _FM_DATA["k303"]
+
+# Union of all sections (holdings is the superset)
+FUND_MANAGER_CODES = {**FUND_MANAGER_CODES_K303, **FUND_MANAGER_CODES_HOLDINGS}
 
 # Apify Actor IDs
 APIFY_ACTORS = {

@@ -33,7 +33,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from shared.apify_client import apify_request, run_actor_and_wait, log
 from shared.constants import (
-    FUND_MANAGER_CODES, APIFY_ACTORS, HEBREW_MONTHS,
+    FUND_MANAGER_CODES_HOLDINGS, APIFY_ACTORS, HEBREW_MONTHS,
     UNUSUAL_ASSET_TYPES, REQUIRED_COMBINATIONS, COMBINATION_111_THRESHOLD
 )
 from shared.data_utils import fix_shifted_encoding
@@ -769,18 +769,18 @@ def process_fund_reports(funds_list_path: str, current_report_path: str, previou
 
 def main():
     parser = argparse.ArgumentParser(description="Fund Automation - Complete Pipeline")
-    parser.add_argument('--fund-name', required=True, help=f'Fund manager name. Options: {list(FUND_MANAGER_CODES.keys())}')
+    parser.add_argument('--fund-name', required=True, help=f'Fund manager name. Options: {list(FUND_MANAGER_CODES_HOLDINGS.keys())}')
     parser.add_argument('--output-dir', default='.', help='Output directory for files')
     parser.add_argument('--keep-temp', action='store_true', help='Keep temporary files')
 
     args = parser.parse_args()
 
     fund_name = args.fund_name
-    fund_code = FUND_MANAGER_CODES.get(fund_name)
+    fund_code = FUND_MANAGER_CODES_HOLDINGS.get(fund_name)
 
     if not fund_code:
         print(f"ERROR: Unknown fund manager: {fund_name}")
-        print(f"Available: {list(FUND_MANAGER_CODES.keys())}")
+        print(f"Available: {list(FUND_MANAGER_CODES_HOLDINGS.keys())}")
         sys.exit(1)
 
     if not APIFY_TOKEN:

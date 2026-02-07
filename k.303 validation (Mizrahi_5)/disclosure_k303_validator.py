@@ -47,7 +47,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 
 # Add parent directory to path for shared imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from shared.constants import FUND_MANAGER_CODES
+from shared.constants import FUND_MANAGER_CODES_K303
 
 # Global log directory for current run
 LOG_RUN_DIR: Optional[Path] = None
@@ -425,7 +425,7 @@ def setup_logging(log_base_dir: Path = Path(__file__).parent.parent / "log") -> 
 
 MIZRAHI_TRUSTEE_NAME = 'מזרחי טפחות חברה לנאמנות בע"מ'
 
-FUND_MANAGER_NAMES = list(FUND_MANAGER_CODES.keys())
+FUND_MANAGER_NAMES = list(FUND_MANAGER_CODES_K303.keys())
 
 # Disclosure report columns
 D_COL_FUND_NO = "מספר קרן"
