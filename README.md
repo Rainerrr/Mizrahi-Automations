@@ -29,9 +29,9 @@ Fetches fund data from Maya via Apify actors and performs comprehensive complian
 ### Usage
 
 ```bash
-python fund_automation_complete.py --fund-name "סיגמא"
-python fund_automation_complete.py --fund-name "סיגמא" --output-dir ./reports
-python fund_automation_complete.py --fund-name "סיגמא" --keep-temp
+python fund_automation_complete.py --fund-name "מגדל"
+python fund_automation_complete.py --fund-name "מגדל" --output-dir ./reports
+python fund_automation_complete.py --fund-name "מגדל" --keep-temp
 ```
 
 ### Output Sheets
@@ -71,7 +71,7 @@ python mizrahi_special_transactions.py \
     --input-report "1702431.csv" \
     --output-xlsx "output.xlsx" \
     --email-json "email.json" \
-    --manager-name "איילון" \
+    --manager-name "מגדל" \
     --report-month "2025-12" \
     --max-exceptions 50
 ```
@@ -134,15 +134,11 @@ python "k.303 validation (Mizrahi_5)/disclosure_k303_validator.py" \
 | Hebrew Name | Code |
 |------------|------|
 | מגדל (Migdal) | 10040 |
-| איילון (Ayalon) | 10054 |
 | קסם (Kesem) | 10047 |
-| סיגמא (Sigma) | 10048 |
-| פורסט (Forest) | 10082 |
 | הראל (Harel) | 10031 |
 | אנליסט (Analyst) | 10019 |
 | מיטב (Meitav) | 10083 |
 | איביאי (IBI) | 10068 |
-| אלטשולר-שחם (Altshuler Shaham) | 10017 |
 
 ## Installation
 

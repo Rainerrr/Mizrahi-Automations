@@ -89,11 +89,13 @@ def fetch_k303_reports(fund_name: str, temp_dir: Path) -> tuple[Path, Path, str 
     """
     log(f"Fetching K.303 reports for: {fund_name}")
 
-    # Run the K.303 actor with fund manager name
+    # Run the K.303 actor — pass numeric code when available, fall back to name
+    fund_code = FUND_MANAGER_CODES.get(fund_name)
+    actor_input = {"fundManagerCode": fund_code} if fund_code else {"fundManagerName": fund_name}
     run_data = run_actor_and_wait(
         APIFY_TOKEN,
         APIFY_ACTORS["K303_REPORTS"],
-        {"fundManagerName": fund_name},
+        actor_input,
         timeout=300  # K.303 downloads can be slow
     )
 

@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 """Shared constants for Mizrahi automations."""
 
-# Fund Manager Codes - maps Hebrew names to TASE codes
-FUND_MANAGER_CODES = {
-    "מגדל": "10040",
-    "קסם": "10047",
-    "סיגמא": "10048",
-    "הראל": "10031",
-    "אנליסט": "10019",
-    "מיטב": "10083",
-    "איביאי": "10068",
-    "אלטשולר-שחם": "10017",
-}
+import json
+from pathlib import Path
+
+# Fund Manager Codes - loaded from fund_managers.json (single source of truth)
+_FM_PATH = Path(__file__).parent / "fund_managers.json"
+with open(_FM_PATH, encoding="utf-8") as _f:
+    FUND_MANAGER_CODES = json.load(_f)
 
 # Apify Actor IDs
 APIFY_ACTORS = {

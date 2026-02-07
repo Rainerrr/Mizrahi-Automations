@@ -4,8 +4,8 @@ Fund Automation - Complete Standalone Script
 Fetches files from Apify actors and processes them into final Excel report.
 
 Usage:
-    python fund_automation_complete.py --fund-name "סיגמא"
-    python fund_automation_complete.py --fund-name "סיגמא" --output-dir ./reports
+    python fund_automation_complete.py --fund-name "מגדל"
+    python fund_automation_complete.py --fund-name "מגדל" --output-dir ./reports
 """
 
 import os

@@ -17,8 +17,8 @@ pip install pandas openpyxl requests python-dotenv
 
 **Fund completeness and compliance checks:**
 ```bash
-python fund_automation_complete.py --fund-name "סיגמא"
-python fund_automation_complete.py --fund-name "סיגמא" --output-dir ./reports --keep-temp
+python fund_automation_complete.py --fund-name "מגדל"
+python fund_automation_complete.py --fund-name "מגדל" --output-dir ./reports --keep-temp
 ```
 
 **Special transactions validation:**
@@ -28,7 +28,7 @@ python mizrahi_special_transactions.py \
     --input-report "1702431.csv" \
     --output-xlsx "output.xlsx" \
     --email-json "email.json" \
-    --manager-name "איילון" \
+    --manager-name "מגדל" \
     --report-month "2025-12" \
     --max-exceptions 50
 ```
@@ -171,12 +171,10 @@ The K.303 validator uses a hierarchical code system (levels 1-4) defined in `k.3
 |------------|------|
 | מגדל (Migdal) | 10040 |
 | קסם (Kesem) | 10047 |
-| סיגמא (Sigma) | 10048 |
 | הראל (Harel) | 10031 |
 | אנליסט (Analyst) | 10019 |
 | מיטב (Meitav) | 10083 |
 | איביאי (IBI) | 10068 |
-| אלטשולר-שחם (Altshuler Shaham) | 10017 |
 
 ## Configuration
 
